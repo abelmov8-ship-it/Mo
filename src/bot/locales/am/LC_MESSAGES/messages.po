@@ -1,0 +1,19 @@
+# Amharic translations (አማርኛ)
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "welcome"
+msgstr "እንኳን ደህና መጡ፣ {first_name}!"
+
+msgid "search_prompt"
+msgstr "የፊልም ስም ይፈልጉ:"
+
+msgid "no_results"
+msgstr "ለ\"{query}\" ምንም ውጤት አልተገኘም።"
+
+msgid "vip_expired"
+msgstr "የ VIP ምዝገባዎ ጊዜው አልፏል።"
+
+msgid "payment_pending"
+msgstr "ክፍያ ቀርቧል። የአስተዳዳሪ ፈቃድ እየጠበቁ ነው።"
