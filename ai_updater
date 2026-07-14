@@ -1,0 +1,92 @@
+import os
+import requests
+
+# በሰጠኸኝ የ GLM API Key በቀጥታ ተተክቷል
+api_key = "01ad9e9ea85441b4a59640615a801201.W2Iv8A45sO9fvbAG"
+
+# AI-ው እንዳይነካቸው የምንፈልጋቸው ፋይሎች (ይህ ራሱ ስክሪፕቱ እንዳይቀየር)
+EXCLUDE_FILES = ["ai_updater.py"]
+
+# በፕሮጀክቱ ውስጥ ያሉትን ሁሉንም የ Python (.py) ፋይሎች መፈለግ
+files_to_update = []
+for root, dirs, files in os.walk("."):
+    # እንደ .git ወይም .github ያሉ ድብቅ ፎልደሮችን መተው
+    if any(part.startswith('.') for part in root.split(os.sep)):
+        continue
+    for file in files:
+        if file.endswith(".py") and file not in EXCLUDE_FILES:
+            files_to_update.append(os.path.join(root, file))
+
+print(f"ለማስተካከል የተገኙ ፋይሎች፦ {files_to_update}")
+
+# ለእያንዳንዱ ፋይል በ GLM 5.2 ማስተካከያ ማድረግ
+for file_path in files_to_update:
+    print(f"\n---------------------------------------------")
+    print(f"ፋይሉን በማንበብ ላይ፦ {file_path}")
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            original_code = f.read()
+    except Exception as e:
+        print(f"ስህተት፦ ፋይሉን ማንበብ አልተቻለም {file_path}፦ {e}")
+        continue
+
+    # ለ GLM የሚሰጥ ትዕዛዝ
+    PROMPT = "ይህንን የቴሌግራም ቦት ኮድ አሻሽል። ስህተቶች ካሉበት አርም፣ በተለይ የ async (aiogram) አሰራሩን እና ዳታቤዝ ግንኙነቱን ሳታበላሽ አላስፈላጊ መስመሮችን ቀንሰህ ይበልጥ ፈጣን አድርገው።"
+
+    # የ Z.ai (GLM 5.2) API
+    url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    payload = {
+        "model": "glm-5.2",
+        "messages": [
+            {
+                "role": "system", 
+                "content": (
+                    "You are an expert Python developer. You MUST update and optimize the provided code.\n"
+                    "CRITICAL REQUIREMENT: You MUST write the ENTIRE updated Python code from start to finish. "
+                    "Do NOT truncate the code, do NOT use placeholders (like '# ... rest of code remains the same' or '# keep existing handlers'), "
+                    "and do NOT skip any part of the code. You must output 100% of the functional code.\n"
+                    "Provide ONLY the raw updated python code. Do NOT include markdown code block markers (like
+                )
+            },
+            {
+                "role": "user", 
+                "content": f"Instructions: {PROMPT}\n\nCode:\n{original_code}"
+            }
+        ]
+    }
+
+    print(f"ኮዱን ወደ GLM 5.2 በመላክ ላይ...")
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        ai_response = response.json()
+        try:
+            updated_code = ai_response['choices'][0]['message']['content'].strip()
+            
+            # AI-ው በስህተት የማርክዳውን ምልክት (
+) አብሮ ካመጣ ለማጥፋት
+            if updated_code.startswith("
+                updated_code = updated_code[9:]
+            elif updated_code.startswith("
+"):
+                updated_code = updated_code[3:]
+            if updated_code.endswith("`"):
+                updated_code = updated_code[:-3]
+            updated_code = updated_code.strip()
+
+            # አዲሱን ኮድ መልሶ ፋይሉ ላይ መጻፍ (የድሮውን ሙሉ በሙሉ ይተካዋል)
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(updated_code)
+            print(f"ውጤት፦ {file_path} ሙሉ በሙሉ በ GLM 5.2 ተስተካክሎ ተተክቷል!")
+        except (KeyError, IndexError) as e:
+            print(f"ስህተት፦ የ GLM ምላሽን ማንበብ አልተቻለም ለ {file_path}፦", e)
+    else:
+        print(f"የ API ስህተት ለ {file_path}፦ Status {response.status_code}, {response.text}")
+
+print("\n---------------------------------------------")
+print("ሁሉም ፋይሎች በተሳካ ሁኔታ ተጠናቀዋል!")
